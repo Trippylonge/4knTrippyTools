@@ -520,27 +520,27 @@
     <a class="nav-link" href="https://github.com/trippylonge" target="_blank">GitHub</a>
     <div class="key-indicator" onclick="focusKeyInput()">
       <div class="key-dot" id="navDot"></div>
-      <span id="navKeyLabel">API key</span>
+      <span id="navKeyLabel">AI mode off</span>
     </div>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-eyebrow">Open Source · Browser Native · Free Forever</div>
+  <div class="hero-eyebrow">Open Source · Browser Native · No Login · Free to Use</div>
   <h1 class="hero-title">
     CREATOR<br>
     <span class="line2">TOOLS.</span>
   </h1>
   <p class="hero-sub">
-    Timestamp maps, AI captions, and tag generators for music and video creators.
-    Everything runs in your browser — no accounts, no uploads to any server.
+    Timestamp maps, caption generators, and tag tools for music and video creators.
+    Everything runs in your browser — no accounts, no server uploads, no API key required.
   </p>
   <div class="hero-badges">
     <span class="badge highlight">No login required</span>
     <span class="badge">Runs 100% in browser</span>
     <span class="badge">Web Audio API</span>
-    <span class="badge">Powered by Claude</span>
+    <span class="badge">+ Claude AI (optional)</span>
     <span class="badge">MIT License</span>
   </div>
 </section>
@@ -549,25 +549,25 @@
 <section class="setup-section" id="setup">
   <div class="setup-card">
     <div class="setup-header">
-      <span class="setup-title">One-time setup — Anthropic API key</span>
+      <span class="setup-title">Optional — Anthropic API key (unlocks AI mode)</span>
       <span class="setup-status" id="setupStatus">
         <span id="setupDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:6px"></span>
-        <span id="setupStatusText">not configured</span>
+        <span id="setupStatusText">not set — template mode active</span>
       </span>
     </div>
     <div class="setup-body">
       <div class="setup-steps">
         <div class="step">
           <div class="step-num">1</div>
-          <div class="step-text"><strong>Get a free key</strong>Visit <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> and create an API key. Free tier is enough.</div>
+          <div class="step-text"><strong>Works without a key</strong>All three tools run free using smart templates and the Web Audio API. No signup, no credits needed.</div>
         </div>
         <div class="step">
           <div class="step-num">2</div>
-          <div class="step-text"><strong>Paste it below</strong>Your key stays in your browser's localStorage. Never sent to any server except Anthropic directly.</div>
+          <div class="step-text"><strong>Optional: add a key</strong>The Caption Generator can use Claude AI to read your actual content and write smarter captions. Requires ~$5 of API credits.</div>
         </div>
         <div class="step">
           <div class="step-num">3</div>
-          <div class="step-text"><strong>Open any tool</strong>All three tools share the same key automatically. Set it once, use everywhere.</div>
+          <div class="step-text"><strong>Key stays in your browser</strong>Stored in localStorage on your device only. Never sent anywhere except directly to api.anthropic.com.</div>
         </div>
       </div>
 
@@ -585,9 +585,9 @@
       </div>
 
       <div class="setup-note">
-        🔒 Your key is stored only in <code>localStorage</code> on this device. It is never logged, tracked, or sent anywhere except directly to <a href="https://api.anthropic.com" target="_blank">api.anthropic.com</a> when you use the Caption Generator.
-        The Track Analyzer and Video Analyzer work without a key — they use the Web Audio API only.
-        &nbsp;·&nbsp; <a href="https://console.anthropic.com/settings/keys" target="_blank">Get your key →</a>
+        🔒 Key stored in <code>localStorage</code> on this device only — never logged or tracked. Sent exclusively to <a href="https://api.anthropic.com" target="_blank">api.anthropic.com</a>.
+        Without a key all tools still generate captions and tags using smart templates.
+        &nbsp;·&nbsp; <a href="https://console.anthropic.com/settings/keys" target="_blank">Get a key at console.anthropic.com →</a>
       </div>
     </div>
   </div>
@@ -644,17 +644,16 @@
 
     <!-- Caption Generator -->
     <a class="tool-card" href="caption-generator.html">
-      <div class="needs-key">NEEDS KEY</div>
       <div class="tool-number">03</div>
       <div class="tool-name">Caption<br>Generator</div>
       <p class="tool-desc">
-        Claude reads your video frames and audio profile and writes platform-ready captions, descriptions, and search tags — in your chosen tone.
+Generates platform-ready captions, descriptions, and tags from your audio or video file. Works free with smart templates — add an API key to upgrade to AI-written captions.
       </p>
       <div class="tool-features">
-        <span class="tool-feature">AI reads video frames</span>
+        <span class="tool-feature">Works free — no key needed</span>
         <span class="tool-feature">4 tone modes</span>
         <span class="tool-feature">YouTube · IG · TikTok · Threads</span>
-        <span class="tool-feature">One-click copy per platform</span>
+        <span class="tool-feature">AI upgrade with Anthropic key</span>
       </div>
       <div class="tool-formats">
         <span class="tool-fmt">MP4</span>
@@ -672,11 +671,11 @@
 <footer>
   <div class="footer-left">
     Built by <a href="https://github.com/trippylonge" target="_blank">4knTrippy</a> · Open source under MIT license<br>
-    Tools run entirely in your browser. No data leaves your device except API calls to Anthropic.
+    All tools run entirely in your browser. No data leaves your device. API key optional.
   </div>
   <div class="footer-right">
     <a class="footer-link" href="https://github.com/trippylonge" target="_blank">GitHub →</a>
-    <a class="footer-link" href="https://console.anthropic.com/settings/keys" target="_blank">Get API key →</a>
+    <a class="footer-link" href="https://console.anthropic.com/settings/keys" target="_blank">Optional: API key →</a>
   </div>
 </footer>
 
@@ -694,7 +693,7 @@ function saveKey() {
   }
   localStorage.setItem(KEY_NAME, val);
   updateUI(val);
-  showToast('API key saved ✓ All tools are ready');
+  showToast('API key saved ✓ Caption Generator now in AI mode');
 }
 
 function clearKey() {
@@ -715,7 +714,7 @@ function updateUI(key) {
 
   if (key) {
     dot.classList.add('active');
-    label.textContent = 'key set';
+    label.textContent = 'AI mode on';
     setupDot.style.background = 'var(--accent)';
     setupDot.style.boxShadow = '0 0 6px var(--accent)';
     setupText.textContent = 'configured ✓';
