@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caption Generator — 4knTrippy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Playfair+Display:wght@400;700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --surface2: #f0ede6;
+    --surface3: #e8e4db;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.15);
+    --text: #1a1a18;
+    --muted: #888;
+    --muted2: #aaa;
+    --accent: #1a1a18;
+    --ink: #1a1a18;
+    --red: #c0392b;
+    --green: #1a7a4a;
+    --amber: #b8620a;
+    --blue: #1a4a8a;
+    --mono: 'DM Mono', monospace;
+    --display: 'Playfair Display', serif;
+    --sans: 'Outfit', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--ink);
+    color: #f7f5f0;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .logo em { font-style: italic; opacity: 0.6; }
+
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    opacity: 0.45;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .main { padding: 40px; max-width: 880px; margin: 0 auto; }
+
+  .intro-text {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+  .intro-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 36px;
+    font-weight: 300;
+  }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 6px;
+    padding: 32px 24px;
+    cursor: pointer;
+    position: relative;
+    background: var(--surface);
+    transition: border-color 0.2s, background 0.2s;
+    text-align: center;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--ink);
+    background: var(--surface2);
+  }
+  .drop-zone input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .dz-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    opacity: 0.3;
+  }
+  .dz-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .dz-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .dz-formats { margin-top: 10px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; }
+  .fmt { font-size: 10px; font-family: var(--mono); padding: 2px 7px; border: 1px solid var(--border2); border-radius: 2px; color: var(--muted); }
+
+  .queue { margin-bottom: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+  .qi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+  }
+  .qi-type-bar {
+    width: 4px;
+    flex-shrink: 0;
+  }
+  .qi-type-bar.video { background: var(--blue); }
+  .qi-type-bar.audio { background: var(--amber); }
+  .qi-inner {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  .qi-thumb {
+    width: 52px;
+    height: 34px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .qi-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .qi-name { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qi-right { display: flex; align-items: center; gap: 10px; }
+  .qi-filetype { font-size: 10px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; }
+  .qi-status { font-size: 11px; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .qi-status.working { color: var(--amber); }
+  .qi-status.done { color: var(--green); }
+  .qi-status.error { color: var(--red); }
+  .qi-remove {
+    background: none;
+    border: none;
+    color: var(--muted2);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .qi-remove:hover { color: var(--red); }
+  .qi-prog { height: 2px; background: var(--surface3); }
+  .qi-prog-fill { height: 100%; background: var(--ink); width: 0; transition: width 0.4s; }
+
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+
+  .generate-btn {
+    background: var(--ink);
+    color: #f7f5f0;
+    border: none;
+    border-radius: 4px;
+    padding: 13px 32px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    display: none;
+    letter-spacing: 0.01em;
+  }
+  .generate-btn.visible { display: inline-block; }
+  .generate-btn:hover { opacity: 0.82; }
+  .generate-btn:active { transform: scale(0.98); }
+  .generate-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .tone-selector { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tone-label { font-size: 12px; font-family: var(--mono); color: var(--muted); }
+  .tone-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 6px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tone-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .tone-btn.active { background: var(--ink); color: #f7f5f0; border-color: var(--ink); }
+
+  .results { display: flex; flex-direction: column; gap: 40px; }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .rc-header {
+    padding: 18px 22px 16px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .rc-thumb {
+    width: 72px;
+    height: 46px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .rc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .rc-title { font-family: var(--display); font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+  .rc-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .rc-chip {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 2px;
+  }
+  .rc-chip.video { color: var(--blue); background: rgba(26,74,138,0.07); }
+  .rc-chip.audio { color: var(--amber); background: rgba(184,98,10,0.08); }
+
+  .rc-body { padding: 22px; }
+
+  .sec-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    margin-top: 24px;
+  }
+  .sec-label:first-child { margin-top: 0; }
+
+  .platform-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    width: fit-content;
+  }
+  .ptab {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 7px 14px;
+    background: var(--surface);
+    border: none;
+    border-right: 1px solid var(--border2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    letter-spacing: 0.04em;
+  }
+  .ptab:last-child { border-right: none; }
+  .ptab:hover { background: var(--surface2); color: var(--text); }
+  .ptab.active { background: var(--ink); color: #f7f5f0; }
+
+  .caption-block { display: none; }
+  .caption-block.active { display: block; }
+
+  .caption-output {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+    font-family: var(--sans);
+    min-height: 80px;
+  }
+
+  .caption-output.loading {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .caption-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .char-count { font-size: 11px; font-family: var(--mono); color: var(--muted2); }
+
+  .copy-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 5px 14px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .copy-btn.copied { background: var(--ink); color: #f7f5f0; border-color: var(--ink); }
+
+  .tags-section { margin-top: 20px; }
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 12px;
+    font-family: var(--mono);
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    background: var(--surface);
+  }
+  .tag:hover { border-color: var(--ink); color: var(--ink); }
+  .tag.copied { background: var(--ink); color: #f7f5f0; border-color: var(--ink); }
+
+  .regen-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 5px 14px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 8px;
+  }
+  .regen-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+    line-height: 2.2;
+  }
+
+  .api-key-banner {
+    background: var(--surface);
+    border: 1.5px solid var(--border2);
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .api-key-banner.set { border-color: var(--green); background: rgba(26,122,74,0.04); }
+  .api-key-label { font-size: 12px; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .api-key-input {
+    flex: 1;
+    min-width: 220px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .api-key-input:focus { border-color: var(--ink); }
+  .api-key-save {
+    font-size: 12px;
+    font-family: var(--mono);
+    padding: 8px 16px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    background: var(--ink);
+    color: #f7f5f0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .api-key-save:hover { opacity: 0.8; }
+  .api-key-status { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+  .api-key-status.ok { color: var(--green); }
+  .api-key-hint { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-top: 6px; width: 100%; }
+  .api-key-hint a { color: var(--blue); text-decoration: none; }
+  .api-key-hint a:hover { text-decoration: underline; }
+
+  @keyframes dots {
+    0%  { content: 'Generating.'; }
+    33% { content: 'Generating..'; }
+    66% { content: 'Generating...'; }
+  }
+  .generating::after { content: 'Generating.'; animation: dots 1.2s steps(1) infinite; }
+
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .mode-badge {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 5px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+  .mode-badge.ai { border-color: rgba(26,122,74,0.4); color: var(--green); background: rgba(26,122,74,0.06); }
+
+  .template-notice {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--amber);
+    background: rgba(184,98,10,0.07);
+    border: 1px solid rgba(184,98,10,0.2);
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+  .template-notice a { color: var(--amber); }
+  .result-card { animation: fadein 0.3s ease; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Caption <em>&</em> Description Generator</div>
+  <div class="header-meta">AI-Powered · Claude Sonnet</div>
+</header>
+
+<div class="main">
+
+  <div class="intro-text">Write once,<br>publish everywhere.</div>
+  <div class="intro-sub">Drop a video or audio file. Claude reads the content and writes platform-ready captions, descriptions, and tags.</div>
+
+  <div class="api-key-banner" id="apiKeyBanner">
+    <span class="api-key-label">Anthropic API key —</span>
+    <input class="api-key-input" type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+    <button class="api-key-save" onclick="saveApiKey()">Save</button>
+    <span class="api-key-status" id="apiKeyStatus">not set</span>
+    <div class="api-key-hint">Optional — needed only for AI mode. Requires ~$5 of API credits (~1,600 generations). Without a key, smart template mode runs free. Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com/settings/keys</a></div>
+  </div>
+
+  <div class="upload-grid">
+    <div class="drop-zone" id="dzVideo">
+      <input type="file" id="videoInput" accept="video/*,.mp4,.mov,.webm,.mkv" multiple>
+      <div class="dz-icon">▶</div>
+      <div class="dz-title">Video files</div>
+      <div class="dz-sub">frames extracted for AI analysis</div>
+      <div class="dz-formats">
+        <span class="fmt">MP4</span><span class="fmt">MOV</span><span class="fmt">WEBM</span>
+      </div>
+    </div>
+    <div class="drop-zone" id="dzAudio">
+      <input type="file" id="audioInput" accept="audio/*,.mp3,.wav,.flac,.aac,.ogg,.m4a" multiple>
+      <div class="dz-icon">♪</div>
+      <div class="dz-title">Audio files</div>
+      <div class="dz-sub">waveform analysed + metadata read</div>
+      <div class="dz-formats">
+        <span class="fmt">MP3</span><span class="fmt">WAV</span><span class="fmt">FLAC</span><span class="fmt">M4A</span><span class="fmt">AAC</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="queue" id="queue"></div>
+
+  <div class="controls-row">
+    <button class="generate-btn" id="genBtn" onclick="generateAll()">Generate captions</button>
+    <div class="tone-selector" id="toneSel" style="display:none">
+      <span class="tone-label">tone —</span>
+      <button class="tone-btn active" data-t="artistic" onclick="setTone('artistic',this)">Artistic</button>
+      <button class="tone-btn" data-t="hype" onclick="setTone('hype',this)">Hype</button>
+      <button class="tone-btn" data-t="minimal" onclick="setTone('minimal',this)">Minimal</button>
+      <button class="tone-btn" data-t="storytelling" onclick="setTone('storytelling',this)">Storytelling</button>
+    </div>
+    <div class="mode-badge" id="modeBadge">template mode</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty-state" id="emptyState">
+      Upload a video or audio file above.<br>
+      Claude will generate captions and descriptions for every platform.
+    </div>
+  </div>
+
+</div>
+
+<canvas id="scratchCanvas" style="display:none" width="320" height="180"></canvas>
+
+<script>
+const files = [];
+const thumbs = {};
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let activeTone = 'artistic';
+
+const dzVideo = document.getElementById('dzVideo');
+const dzAudio = document.getElementById('dzAudio');
+const videoInput = document.getElementById('videoInput');
+const audioInput = document.getElementById('audioInput');
+const queueEl = document.getElementById('queue');
+const genBtn = document.getElementById('genBtn');
+const toneSelEl = document.getElementById('toneSel');
+const resultsEl = document.getElementById('results');
+const scratchCanvas = document.getElementById('scratchCanvas');
+const scratchCtx = scratchCanvas.getContext('2d');
+
+function setupDZ(dz, input) {
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); addFiles(e.dataTransfer.files); });
+  input.addEventListener('change', () => { addFiles(input.files); input.value = ''; });
+}
+setupDZ(dzVideo, videoInput);
+setupDZ(dzAudio, audioInput);
+
+function isVideo(f) { return f.type.startsWith('video/') || /\.(mp4|mov|webm|mkv|avi)$/i.test(f.name); }
+function isAudio(f) { return f.type.startsWith('audio/') || /\.(mp3|wav|flac|aac|ogg|m4a)$/i.test(f.name); }
+
+function addFiles(newFiles) {
+  for (const f of newFiles) {
+    if (!files.find(x => x.name === f.name && x.size === f.size)) {
+      const idx = files.length;
+      files.push(f);
+      if (isVideo(f)) extractThumb(f, idx);
+    }
+  }
+  if (files.length) {
+    genBtn.classList.add('visible');
+    toneSelEl.style.display = 'flex';
+    document.getElementById('emptyState')?.remove();
+    updateModeBadge();
+  }
+  renderQueue();
+}
+
+function extractThumb(file, idx) {
+  const url = URL.createObjectURL(file);
+  const v = document.createElement('video');
+  v.src = url; v.muted = true;
+  v.addEventListener('loadeddata', () => { v.currentTime = Math.min(2, v.duration * 0.08); });
+  v.addEventListener('seeked', () => {
+    scratchCanvas.width = 320; scratchCanvas.height = 180;
+    scratchCtx.drawImage(v, 0, 0, 320, 180);
+    thumbs[idx] = scratchCanvas.toDataURL('image/jpeg', 0.75);
+    URL.revokeObjectURL(url);
+    renderQueue();
+  }, { once: true });
+  v.load();
+}
+
+function renderQueue() {
+  queueEl.innerHTML = '';
+  files.forEach((f, i) => {
+    const type = isVideo(f) ? 'video' : 'audio';
+    const thumbHtml = thumbs[i]
+      ? `<img src="${thumbs[i]}" alt="">`
+      : (type === 'video' ? '▶' : '♪');
+    const ext = f.name.split('.').pop().toUpperCase();
+    const item = document.createElement('div');
+    item.className = 'qi'; item.id = 'qi-' + i;
+    item.innerHTML = `
+      <div class="qi-type-bar ${type}"></div>
+      <div class="qi-inner">
+        <div class="qi-thumb">${thumbHtml}</div>
+        <div class="qi-name">${esc(f.name)}</div>
+        <div class="qi-right">
+          <span class="qi-filetype">${ext}</span>
+          <span class="qi-status" id="qs-${i}">ready</span>
+          <button class="qi-remove" onclick="removeFile(${i})" title="Remove">×</button>
+        </div>
+      </div>
+      <div class="qi-prog"><div class="qi-prog-fill" id="qp-${i}"></div></div>
+    `;
+    queueEl.appendChild(item);
+  });
+}
+
+function removeFile(idx) {
+  files.splice(idx, 1);
+  delete thumbs[idx];
+  const shifted = {};
+  Object.keys(thumbs).forEach(k => {
+    const ki = parseInt(k);
+    if (ki > idx) shifted[ki - 1] = thumbs[k];
+    else if (ki < idx) shifted[ki] = thumbs[k];
+  });
+  Object.keys(thumbs).forEach(k => delete thumbs[k]);
+  Object.assign(thumbs, shifted);
+  renderQueue();
+  if (!files.length) {
+    genBtn.classList.remove('visible');
+    toneSelEl.style.display = 'none';
+    resultsEl.innerHTML = '<div class="empty-state" id="emptyState">Upload a video or audio file above.<br>Claude will generate captions and descriptions for every platform.</div>';
+  }
+}
+
+function setStatus(i, t, cls) {
+  const el = document.getElementById('qs-' + i);
+  if (el) { el.textContent = t; el.className = 'qi-status ' + (cls||''); }
+}
+function setProgress(i, pct) {
+  const el = document.getElementById('qp-' + i);
+  if (el) el.style.width = pct + '%';
+}
+
+function setTone(t, btn) {
+  activeTone = t;
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function generateAll() {
+  genBtn.disabled = true;
+  genBtn.textContent = 'Generating…';
+  resultsEl.innerHTML = '';
+
+  for (let i = 0; i < files.length; i++) {
+    setStatus(i, 'analyzing…', 'working');
+    setProgress(i, 10);
+    try {
+      const data = await processFile(files[i], i);
+      setProgress(i, 100);
+      setStatus(i, 'done', 'done');
+      renderResult(data, i);
+    } catch(e) {
+      const msg = e.message || 'unknown error';
+      setStatus(i, msg.includes('API key') ? 'no API key' : msg.includes('parse') ? 'AI error — retry' : 'error: ' + msg.slice(0,40), 'error');
+      console.error(e);
+    }
+  }
+
+  genBtn.disabled = false;
+  genBtn.textContent = 'Regenerate';
+}
+
+async function processFile(file, idx) {
+  const type = isVideo(file) ? 'video' : 'audio';
+  const name = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+
+  let audioMeta = null;
+  let frames = [];
+  let duration = 0;
+  let videoMeta = null;
+
+  if (type === 'audio') {
+    setProgress(idx, 25);
+    audioMeta = await analyzeAudio(file);
+    duration = audioMeta.duration;
+  } else {
+    setProgress(idx, 20);
+    videoMeta = await getVideoMeta(file);
+    duration = videoMeta.duration;
+    frames = await extractFrames(file, duration);
+    setProgress(idx, 50);
+    try {
+      audioMeta = await analyzeAudio(file);
+    } catch(e) {}
+  }
+
+  setProgress(idx, 60);
+
+  const apiKey = localStorage.getItem('anthropic_api_key') || '';
+  const captions = apiKey
+    ? await callClaude(name, type, audioMeta, frames, duration, videoMeta, thumbs[idx], apiKey)
+    : buildTemplateCaptions(name, type, audioMeta, duration, videoMeta);
+
+  setProgress(idx, 95);
+
+  return { name, type, duration, audioMeta, videoMeta, captions, thumbnail: thumbs[idx], usedAI: !!apiKey };
+}
+
+async function analyzeAudio(file) {
+  const buf = await file.arrayBuffer();
+  let audio;
+  try {
+    audio = await audioCtx.decodeAudioData(buf.slice(0));
+  } catch(e) {
+    // M4A/AAC sometimes fails with Web Audio API — fall back to duration-only via HTMLAudioElement
+    const dur = await new Promise(res => {
+      const a = new Audio();
+      const url = URL.createObjectURL(file);
+      a.addEventListener('loadedmetadata', () => { res(a.duration); URL.revokeObjectURL(url); });
+      a.addEventListener('error', () => { res(0); URL.revokeObjectURL(url); });
+      a.src = url;
+    });
+    return { duration: dur, sampleRate: 44100, windows: [], peakMoment: dur * 0.5,
+      avgEnergy: 0.5, peakRatio: 0.3, quietRatio: 0.2, dynamics: '3.0', energyShape: 'dynamic' };
+  }
+  const dur = audio.duration;
+  const ch = audio.getChannelData(0);
+  const sr = audio.sampleRate;
+
+  const WIN = dur > 120 ? 15 : 8;
+  const windows = [];
+  for (let t = 0; t < dur - WIN/2; t += WIN) {
+    const s0 = Math.floor(t * sr);
+    const s1 = Math.min(Math.floor((t + WIN) * sr), ch.length);
+    let sum = 0;
+    for (let s = s0; s < s1; s++) sum += ch[s] * ch[s];
+    windows.push({ t, rms: Math.sqrt(sum / (s1 - s0)) });
+  }
+
+  const vals = windows.map(w => w.rms);
+  const mn = Math.min(...vals), mx = Math.max(...vals), rng = mx - mn || 1;
+  windows.forEach(w => {
+    w.norm = (w.rms - mn) / rng;
+    w.level = w.norm < 0.2 ? 'quiet' : w.norm < 0.5 ? 'build' : w.norm < 0.75 ? 'mid' : 'peak';
+  });
+
+  const peakMoment = windows.reduce((a, b) => a.rms > b.rms ? a : b);
+  const avgEnergy = vals.reduce((a,b)=>a+b,0)/vals.length;
+  const peakRatio = windows.filter(w=>w.level==='peak').length / windows.length;
+  const quietRatio = windows.filter(w=>w.level==='quiet').length / windows.length;
+  const dynamics = (mx / (mn + 0.0001)).toFixed(1);
+
+  return {
+    duration: dur,
+    sampleRate: sr,
+    windows,
+    peakMoment: peakMoment.t,
+    avgEnergy,
+    peakRatio,
+    quietRatio,
+    dynamics,
+    energyShape: peakRatio > 0.5 ? 'high-energy' : quietRatio > 0.4 ? 'atmospheric' : 'dynamic',
+  };
+}
+
+function getVideoMeta(file) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.src = url;
+    v.addEventListener('loadedmetadata', () => {
+      resolve({ width: v.videoWidth, height: v.videoHeight, duration: v.duration, aspectRatio: (v.videoWidth / v.videoHeight).toFixed(2) });
+      URL.revokeObjectURL(url);
+    }, { once: true });
+    v.addEventListener('error', () => resolve({ duration: 0 }), { once: true });
+    v.load();
+  });
+}
+
+async function extractFrames(file, duration) {
+  const url = URL.createObjectURL(file);
+  const v = document.createElement('video');
+  v.src = url; v.muted = true;
+  await new Promise(r => v.addEventListener('loadeddata', r, { once: true }));
+
+  const count = duration > 120 ? 4 : duration > 30 ? 3 : 2;
+  const times = Array.from({length: count}, (_, i) => duration * (0.1 + (0.8 / (count - 1)) * i));
+  const frames = [];
+
+  for (const t of times) {
+    v.currentTime = t;
+    await new Promise(r => v.addEventListener('seeked', r, { once: true }));
+    scratchCanvas.width = 320; scratchCanvas.height = 180;
+    scratchCtx.drawImage(v, 0, 0, 320, 180);
+    frames.push({ time: t, data: scratchCanvas.toDataURL('image/jpeg', 0.7) });
+  }
+
+  URL.revokeObjectURL(url);
+  return frames;
+}
+
+
+// ── TEMPLATE MODE (no API key) ─────────────────────────────────────────────
+function buildTemplateCaptions(name, type, audioMeta, duration, videoMeta) {
+  const dur = fmt(duration);
+  const bpm = audioMeta ? detectBPMFromMeta(audioMeta) : null;
+  const bpmStr = bpm ? ` · ${bpm} BPM` : '';
+  const shape = audioMeta?.energyShape || 'dynamic';
+  const peakTime = audioMeta ? fmt(audioMeta.peakMoment) : null;
+
+  // Mood words derived from energy shape
+  const moodMap = {
+    'high-energy': { adj: ['relentless', 'explosive', 'unstoppable'], vibe: 'high energy', study: false },
+    'atmospheric': { adj: ['immersive', 'expansive', 'cinematic'], vibe: 'atmospheric', study: true },
+    'dynamic':     { adj: ['layered', 'driving', 'textured'], vibe: 'dynamic', study: true },
+  };
+  const mood = moodMap[shape] || moodMap['dynamic'];
+  const adj = mood.adj[Math.floor(Math.random() * mood.adj.length)];
+
+  // Tone templates
+  const tones = {
+    artistic: {
+      hook: `${name} exists somewhere between silence and sound — ${adj} instrumental storytelling.`,
+      ig_open: `Some music doesn't need words. "${name}" says everything in ${dur}.`,
+      tiktok_open: `This is what ${mood.vibe} sounds like with no lyrics 🎵`,
+      threads_open: `Dropped "${name}" today. ${adj.charAt(0).toUpperCase()+adj.slice(1)} instrumental${bpmStr}. No words needed.`,
+    },
+    hype: {
+      hook: `${name} hits different. ${adj.toUpperCase()} instrumental${bpmStr}.`,
+      ig_open: `NEW DROP 🔥 "${name}" is out now. ${adj} and unfiltered.`,
+      tiktok_open: `POV: you just found your new favourite instrumental 🔥`,
+      threads_open: `"${name}" just dropped. ${adj}${bpmStr}. Go play it loud.`,
+    },
+    minimal: {
+      hook: `${name}. Instrumental${bpmStr}. ${dur}.`,
+      ig_open: `"${name}" — ${dur} of ${adj} instrumental. Link in bio.`,
+      tiktok_open: `${name} · ${adj} · no lyrics · just sound`,
+      threads_open: `"${name}" is out. ${adj} instrumental${bpmStr}.`,
+    },
+    storytelling: {
+      hook: `"${name}" is the soundtrack to a moment you haven't lived yet — ${adj} and wordless.`,
+      ig_open: `Every track tells a story. "${name}" tells its in ${dur} without a single word.`,
+      tiktok_open: `What if music could describe a feeling you can't name? "${name}" tries 🎵`,
+      threads_open: `"${name}" started as a feeling and became a track. ${adj} instrumental${bpmStr}. Hope it lands.`,
+    },
+  };
+
+  const t = tones[activeTone] || tones.artistic;
+
+  // Tags
+  const baseTags = ['#4knTrippy', '#InstrumentalStorytelling', '#InstrumentalMusic', '#BeatTape', '#MusicProducer'];
+  const shapeTags = {
+    'high-energy': ['#HighEnergy', '#WorkoutMusic', '#HypeBeats', '#TrapBeats'],
+    'atmospheric': ['#AmbientMusic', '#ChillBeats', '#StudyBeats', '#FocusMusic'],
+    'dynamic':     ['#HipHopInstrumental', '#LofiBeats', '#ChillHop', '#GrooveBeats'],
+  }[shape] || [];
+  const typeTags = type === 'video' ? ['#MusicVideo', '#VisualArt', '#IndependentArtist'] : ['#NewMusic', '#AudioRelease'];
+  const bpmTags = bpm ? (bpm < 90 ? ['#SlowJam', '#ChillVibes'] : bpm < 120 ? ['#MidTempo'] : ['#FastPaced']) : [];
+  const allTags = [...new Set([...baseTags, ...shapeTags, ...typeTags, ...bpmTags])].slice(0, 12);
+  const tagLine = allTags.join(' ');
+
+  // YouTube timestamps block
+  let tsBlock = '';
+  if (audioMeta && audioMeta.windows && audioMeta.windows.length > 3) {
+    const sections = buildSectionsFromWindows(audioMeta.windows, duration);
+    const levelCount = {};
+    const sectionLabels = { intro: ['Intro','Outro','Breath'], low: ['Build','First movement','Second build'], mid: ['Mid section','Groove','Transition'], peak: ['Drop','Peak','Climax','Main block'] };
+    const lines = sections.map(s => {
+      const idx = levelCount[s.level] = (levelCount[s.level]||0);
+      levelCount[s.level]++;
+      const arr = sectionLabels[s.level] || sectionLabels.intro;
+      return `${fmt(s.start)}  ${arr[idx % arr.length]}`;
+    });
+    tsBlock = `
+⸻ Timestamps ⸻
+${lines.join('\n')}
+`;
+  } else if (peakTime) {
+    tsBlock = `
+0:00  Intro
+${peakTime}  Drop
+`;
+  }
+
+  const ytDesc = `${t.hook}
+
+Instrumental storytelling${bpmStr} · ${dur} · 4knTrippy
+${tsBlock}
+${tagLine}`;
+  const igCaption = `${t.ig_open}
+
+${tagLine}`;
+  const tiktokCaption = `${t.tiktok_open}
+
+${allTags.slice(0,6).join(' ')}`;
+  const threadsPost = `${t.threads_open}
+
+${allTags.slice(0,3).join(' ')}`;
+
+  return {
+    youtube_title: `4knTrippy — ${name} (Official Audio)`,
+    youtube_description: ytDesc,
+    youtube_tags: allTags.map(t => t.replace('#','')),
+    instagram_caption: igCaption,
+    tiktok_caption: tiktokCaption,
+    threads_post: threadsPost,
+    short_description: `${adj.charAt(0).toUpperCase()+adj.slice(1)} instrumental${bpmStr} · ${dur}.`,
+    tags: allTags,
+    _isTemplate: true,
+  };
+}
+
+function detectBPMFromMeta(audioMeta) {
+  // We don't have raw PCM here, but we can estimate from energy window density
+  // Return null — BPM detection needs raw PCM (done in analyzeAudio)
+  return null;
+}
+
+function buildSectionsFromWindows(windows, duration) {
+  const sections = [];
+  let curLevel = windows[0]?.level;
+  let curStart = 0;
+  for (let i = 1; i < windows.length; i++) {
+    if (windows[i].level !== curLevel) {
+      sections.push({ start: curStart, end: windows[i].t, level: curLevel });
+      curStart = windows[i].t;
+      curLevel = windows[i].level;
+    }
+  }
+  if (windows.length) sections.push({ start: curStart, end: duration, level: curLevel });
+  return sections;
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+async function callClaude(name, type, audioMeta, frames, duration, videoMeta, thumbnail, apiKey) {
+  const toneGuide = {
+    artistic: 'Poetic, evocative, imagery-rich. Describe the mood and emotion, not just what happens.',
+    hype: 'High energy, punchy, direct. Use power words. Get people hyped.',
+    minimal: 'Spare and confident. Short sentences. Say the most with the fewest words.',
+    storytelling: 'Narrative voice. Draw the listener/viewer into a moment or journey.',
+  }[activeTone];
+
+  const audioSummary = audioMeta ? `
+Audio profile:
+- Duration: ${Math.round(duration)}s (${fmt(duration)})
+- Energy shape: ${audioMeta.energyShape}
+- Peak moment: ${fmt(audioMeta.peakMoment)}
+- Dynamic range factor: ${audioMeta.dynamics}
+- Peak intensity ratio: ${Math.round(audioMeta.peakRatio * 100)}%
+- Quiet/ambient ratio: ${Math.round(audioMeta.quietRatio * 100)}%
+` : '';
+
+  const videoSummary = videoMeta ? `
+Video profile:
+- Resolution: ${videoMeta.width}×${videoMeta.height}
+- Aspect ratio: ${videoMeta.aspectRatio} (${parseFloat(videoMeta.aspectRatio) < 0.8 ? 'vertical/portrait' : parseFloat(videoMeta.aspectRatio) > 1.6 ? 'widescreen/landscape' : 'square/standard'})
+- Duration: ${fmt(duration)}
+` : '';
+
+  const contentBlocks = [];
+
+  if (frames.length > 0) {
+    contentBlocks.push({ type: 'text', text: `You are analyzing a ${type} file named "${name}". Here are ${frames.length} frames extracted from the video:` });
+    for (let i = 0; i < frames.length; i++) {
+      const b64 = frames[i].data.split(',')[1];
+      contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } });
+      contentBlocks.push({ type: 'text', text: `Frame at ${fmt(frames[i].time)}` });
+    }
+  } else if (thumbnail) {
+    contentBlocks.push({ type: 'text', text: `You are analyzing an audio file named "${name}". Here is a thumbnail/cover image if available:` });
+    const b64 = thumbnail.split(',')[1];
+    contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } });
+  }
+
+  contentBlocks.push({
+    type: 'text',
+    text: `
+File name: "${name}"
+Type: ${type}
+${audioSummary}
+${videoSummary}
+
+Tone instruction: ${toneGuide}
+
+Generate platform-ready captions and descriptions for this ${type}. Artist is 4knTrippy — instrumental storytelling, no lyrics.
+
+Return ONLY a valid JSON object with these exact keys (no markdown, no preamble):
+{
+  "youtube_title": "...",
+  "youtube_description": "...",
+  "youtube_tags": ["...", "..."],
+  "instagram_caption": "...",
+  "tiktok_caption": "...",
+  "threads_post": "...",
+  "short_description": "one sentence, under 20 words",
+  "tags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6", "#tag7", "#tag8", "#tag9", "#tag10", "#tag11", "#tag12"]
+}
+
+Rules:
+- YouTube description: 150-250 words, include timestamps if audio data shows clear sections, end with tags
+- Instagram caption: 50-100 words, emotional hook first, hashtags at end
+- TikTok caption: under 60 words, punchy, trend-aware phrasing, 5-6 hashtags
+- Threads post: conversational, 40-80 words, no hashtag spam (2-3 max)
+- All captions must reflect the tone instruction above
+- Tags: mix of genre, mood, artist, and discovery tags
+`
+  });
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: contentBlocks }]
+    })
+  });
+
+  const data = await response.json();
+  const raw = data.content?.map(c => c.text || '').join('');
+  const clean = raw.replace(/```json|```/g, '').trim();
+
+  try {
+    return JSON.parse(clean);
+  } catch(e) {
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('Failed to parse AI response');
+  }
+}
+
+function fmt(s) {
+  s = Math.round(s);
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+function renderResult(data, fileIdx) {
+  const { name, type, duration, captions, thumbnail, usedAI } = data;
+
+  const thumbHtml = thumbnail
+    ? `<img src="${thumbnail}" alt="">`
+    : (type === 'video' ? '▶' : '♪');
+
+  const platforms = [
+    { id: 'youtube', label: 'YouTube', content: `${captions.youtube_title}\n\n${captions.youtube_description}` },
+    { id: 'instagram', label: 'Instagram', content: captions.instagram_caption },
+    { id: 'tiktok', label: 'TikTok', content: captions.tiktok_caption },
+    { id: 'threads', label: 'Threads', content: captions.threads_post },
+  ];
+
+  const card = document.createElement('div');
+  card.className = 'result-card';
+
+  const tabsHtml = platforms.map((p, i) =>
+    `<button class="ptab${i===0?' active':''}" onclick="switchTab(this,'${card.id || 'r'+fileIdx}','${p.id}')">${p.label}</button>`
+  ).join('');
+
+  const blocksHtml = platforms.map((p, i) => `
+    <div class="caption-block${i===0?' active':''}" data-platform="${p.id}">
+      <div class="caption-output">${esc(p.content)}</div>
+      <div class="caption-footer">
+        <span class="char-count">${p.content.length} chars</span>
+        <button class="copy-btn" onclick="copyCaption(this,'${encodeURIComponent(p.content)}')">Copy</button>
+      </div>
+    </div>
+  `).join('');
+
+  const tagsHtml = (captions.tags || []).map(t =>
+    `<div class="tag" onclick="tapTag(this,'${esc(t)}')">${esc(t)}</div>`
+  ).join('');
+
+  const ytTagsHtml = (captions.youtube_tags || []).map(t =>
+    `<div class="tag" onclick="tapTag(this,'${esc(t)}')">${esc(t)}</div>`
+  ).join('');
+
+  const rid = 'r' + fileIdx;
+  card.id = rid;
+
+  card.innerHTML = `
+    <div class="rc-header">
+      <div class="rc-thumb">${thumbHtml}</div>
+      <div>
+        <div class="rc-title">${esc(name)}</div>
+        <div class="rc-meta">
+          <span class="rc-chip ${type}">${type}</span>
+          <span class="rc-chip">${fmt(duration)}</span>
+          ${captions.short_description ? `<span class="rc-chip">${esc(captions.short_description)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="rc-body">
+      <div class="sec-label">Platform captions</div>
+      <div class="platform-tabs">${tabsHtml}</div>
+      <div class="caption-blocks" id="${rid}-blocks">${blocksHtml}</div>
+      ${data.usedAI ? '' : `<div class="template-notice">⚡ Generated with smart templates — no API key used. <a href="#apiKeyBanner" onclick="document.getElementById('apiKeyInput').focus()">Add your Anthropic key</a> to unlock AI-powered captions that read your actual content.</div>`}
+      <button class="regen-btn" onclick="regenOne(${fileIdx})">↺ Regenerate with current tone</button>
+
+      ${tagsHtml ? `
+        <div class="sec-label" style="margin-top:24px">Hashtags</div>
+        <div class="tags-wrap">${tagsHtml}</div>
+      ` : ''}
+
+      ${ytTagsHtml ? `
+        <div class="sec-label" style="margin-top:16px">YouTube search tags</div>
+        <div class="tags-wrap">${ytTagsHtml}</div>
+      ` : ''}
+    </div>
+  `;
+
+  resultsEl.appendChild(card);
+}
+
+function switchTab(btn, cardId, platform) {
+  const card = document.getElementById(cardId);
+  card.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  card.querySelectorAll('.caption-block').forEach(b => {
+    b.classList.toggle('active', b.dataset.platform === platform);
+  });
+}
+
+async function regenOne(idx) {
+  const file = files[idx];
+  if (!file) return;
+  setStatus(idx, 'regenerating…', 'working');
+  setProgress(idx, 10);
+  try {
+    const data = await processFile(file, idx);
+    setProgress(idx, 100);
+    setStatus(idx, 'done', 'done');
+    const existing = document.getElementById('r' + idx);
+    if (existing) existing.remove();
+    renderResult(data, idx);
+  } catch(e) {
+    setStatus(idx, 'error', 'error');
+    console.error(e);
+  }
+}
+
+function copyCaption(btn, encoded) {
+  navigator.clipboard.writeText(decodeURIComponent(encoded)).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function tapTag(el, tag) {
+  navigator.clipboard.writeText(tag).then(() => {
+    el.classList.add('copied');
+    const orig = el.textContent;
+    el.textContent = 'copied';
+    setTimeout(() => { el.textContent = orig; el.classList.remove('copied'); }, 1200);
+  });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── API key management ──────────────────────────────────────────────
+function updateModeBadge() {
+  const badge = document.getElementById('modeBadge');
+  if (!badge) return;
+  const key = localStorage.getItem('anthropic_api_key');
+  if (key) {
+    badge.textContent = 'AI mode ✓';
+    badge.className = 'mode-badge ai';
+  } else {
+    badge.textContent = 'template mode';
+    badge.className = 'mode-badge';
+  }
+}
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val) return;
+  localStorage.setItem('anthropic_api_key', val);
+  updateApiKeyUI(val);
+  updateModeBadge();
+}
+
+function updateApiKeyUI(key) {
+  const banner = document.getElementById('apiKeyBanner');
+  const status = document.getElementById('apiKeyStatus');
+  const input  = document.getElementById('apiKeyInput');
+  if (key) {
+    banner.classList.add('set');
+    status.textContent = 'set ✓';
+    status.className = 'api-key-status ok';
+    input.value = '●'.repeat(Math.min(key.length, 20));
+  } else {
+    banner.classList.remove('set');
+    status.textContent = 'not set';
+    status.className = 'api-key-status';
+    input.value = '';
+  }
+}
+
+// Load saved key on page open
+(function() {
+  const saved = localStorage.getItem('anthropic_api_key');
+  if (saved) updateApiKeyUI(saved);
+  // Allow pressing Enter in key field
+  document.getElementById('apiKeyInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveApiKey();
+  });
+  // Clear stored value when user starts typing so they can update it
+  document.getElementById('apiKeyInput').addEventListener('focus', () => {
+    const saved = localStorage.getItem('anthropic_api_key');
+    if (saved) document.getElementById('apiKeyInput').value = '';
+  });
+})();
+// ────────────────────────────────────────────────────────────────────
+</script>
+</body>
+</html>
