@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Analyzer — 4knTrippy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #181818;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0ede8;
+    --muted: #666;
+    --accent: #e8593c;
+    --accent2: #5dcaa5;
+    --amber: #ef9f27;
+    --blue: #378add;
+    --peak: #e24b4a;
+    --mid: #ef9f27;
+    --low: #5dcaa5;
+    --intro: #555;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    padding: 32px 40px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; }
+  .logo span { color: var(--accent); }
+  .version { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+
+  .main { padding: 40px; max-width: 900px; margin: 0 auto; }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 12px;
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--surface);
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,89,60,0.04);
+  }
+  .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .drop-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .drop-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .drop-sub { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+
+  .queue { margin-bottom: 32px; display: flex; flex-direction: column; gap: 8px; }
+
+  .queue-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .q-name { font-size: 13px; font-weight: 500; flex: 1; }
+  .q-status { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+  .q-status.analyzing { color: var(--amber); }
+  .q-status.done { color: var(--accent2); }
+
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  .analyze-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 32px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-bottom: 40px;
+    display: none;
+  }
+  .analyze-btn:hover { opacity: 0.88; }
+  .analyze-btn:active { transform: scale(0.98); }
+  .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .analyze-btn.visible { display: inline-block; }
+
+  .results { display: flex; flex-direction: column; gap: 48px; }
+
+  .track-result { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  .track-result-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .tr-title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .tr-meta { font-size: 12px; font-family: var(--mono); color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+  .tr-meta span::before { content: '·'; margin-right: 6px; opacity: 0.4; }
+  .tr-meta span:first-child::before { display: none; }
+
+  .track-body { padding: 24px; }
+
+  .section-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    margin-top: 24px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .ts-row {
+    display: grid;
+    grid-template-columns: 52px 1fr 140px 160px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .ts-row:last-child { border-bottom: none; }
+
+  .ts-time { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); }
+  .ts-label { font-size: 13px; color: var(--text); }
+  .ts-desc { font-size: 11px; font-family: var(--mono); color: var(--muted); text-align: right; }
+
+  .bar-wrap { height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .bar-intro { background: var(--intro); }
+  .bar-low   { background: var(--low); }
+  .bar-mid   { background: var(--mid); }
+  .bar-peak  { background: var(--peak); }
+
+  .yt-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .yt-box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .yt-box-title { font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.05em; }
+  .copy-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--accent2);
+    background: none;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .copy-btn:hover { opacity: 0.7; }
+  .yt-text { font-family: var(--mono); font-size: 12px; line-height: 2; color: var(--text); white-space: pre; }
+
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 12px;
+    font-family: var(--mono);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .tag:hover { border-color: var(--accent); color: var(--text); }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-radius: 8px;
+  }
+  .leg { display: flex; align-items: center; gap: 7px; font-size: 11px; font-family: var(--mono); color: var(--muted); }
+  .leg-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .analyzing-anim { animation: pulse 1.2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">track<span>.</span>analyzer</div>
+  <div class="version">v1.0 — web audio engine</div>
+</header>
+
+<div class="main">
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".mp3,audio/*" multiple>
+    <div class="drop-icon">↑</div>
+    <div class="drop-title">Drop MP3s here</div>
+    <div class="drop-sub">or click to browse — multiple files supported</div>
+  </div>
+
+  <div class="queue" id="queue"></div>
+
+  <button class="analyze-btn" id="analyzeBtn" onclick="analyzeAll()">
+    Analyze tracks
+  </button>
+
+  <div class="legend" id="legend" style="display:none">
+    <div class="leg"><div class="leg-dot" style="background:var(--intro)"></div>Intro / outro</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--low)"></div>Build</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--mid)"></div>Mid</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--peak)"></div>Peak</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty-state" id="emptyState">Upload tracks and hit analyze to generate timestamp maps and tags.</div>
+  </div>
+
+</div>
+
+<script>
+const files = [];
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const queueEl = document.getElementById('queue');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const resultsEl = document.getElementById('results');
+const emptyState = document.getElementById('emptyState');
+const legendEl = document.getElementById('legend');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); addFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => addFiles(fileInput.files));
+
+function addFiles(newFiles) {
+  for (const f of newFiles) {
+    if (!files.find(x => x.name === f.name && x.size === f.size)) {
+      files.push(f);
+      renderQueue();
+    }
+  }
+  if (files.length) {
+    analyzeBtn.classList.add('visible');
+    emptyState.style.display = 'none';
+  }
+}
+
+function renderQueue() {
+  queueEl.innerHTML = '';
+  files.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'queue-item';
+    item.id = 'qi-' + i;
+    item.innerHTML = `
+      <div class="q-name">${f.name}</div>
+      <div class="q-status" id="qs-${i}">ready</div>
+    `;
+    queueEl.appendChild(item);
+  });
+}
+
+function fmt(s) {
+  s = Math.round(s);
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+function setStatus(i, text, cls) {
+  const el = document.getElementById('qs-' + i);
+  if (el) { el.textContent = text; el.className = 'q-status ' + (cls||''); }
+}
+
+async function analyzeAll() {
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = 'Analyzing…';
+  legendEl.style.display = 'flex';
+  resultsEl.innerHTML = '';
+
+  for (let i = 0; i < files.length; i++) {
+    setStatus(i, 'analyzing…', 'analyzing analyzing-anim');
+    try {
+      const result = await analyzeFile(files[i], i);
+      setStatus(i, 'done', 'done');
+      renderResult(result);
+    } catch(e) {
+      setStatus(i, 'error: ' + e.message, '');
+    }
+  }
+
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = 'Re-analyze';
+}
+
+async function analyzeFile(file, idx) {
+  const arrayBuffer = await file.arrayBuffer();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+  const duration = audioBuffer.duration;
+  const sampleRate = audioBuffer.sampleRate;
+  const channelData = audioBuffer.getChannelData(0);
+
+  const WINDOW = 15;
+  const windows = [];
+
+  for (let t = 0; t < duration - WINDOW/2; t += WINDOW) {
+    const startSample = Math.floor(t * sampleRate);
+    const endSample = Math.min(Math.floor((t + WINDOW) * sampleRate), channelData.length);
+    let rmsSum = 0;
+    const count = endSample - startSample;
+    for (let s = startSample; s < endSample; s++) {
+      rmsSum += channelData[s] * channelData[s];
+    }
+    const rms = Math.sqrt(rmsSum / count);
+    windows.push({ t, rms });
+  }
+
+  const rmsVals = windows.map(w => w.rms);
+  const minRms = Math.min(...rmsVals);
+  const maxRms = Math.max(...rmsVals);
+  const range = maxRms - minRms || 1;
+
+  windows.forEach(w => {
+    w.norm = (w.rms - minRms) / range;
+    if (w.norm < 0.2) w.level = 'intro';
+    else if (w.norm < 0.45) w.level = 'low';
+    else if (w.norm < 0.72) w.level = 'mid';
+    else w.level = 'peak';
+  });
+
+  const sections = [];
+  let curLevel = windows[0]?.level;
+  let curStart = 0;
+
+  for (let i = 1; i < windows.length; i++) {
+    if (windows[i].level !== curLevel) {
+      sections.push({ start: curStart, end: windows[i].t, level: curLevel, norm: windows[i-1].norm });
+      curStart = windows[i].t;
+      curLevel = windows[i].level;
+    }
+  }
+  if (windows.length) {
+    sections.push({ start: curStart, end: duration, level: curLevel, norm: windows[windows.length-1].norm });
+  }
+
+  const name = file.name.replace(/\.[^.]+$/, '').replace(/_/g,' ');
+
+  const bpm = guessBPM(channelData, sampleRate, duration);
+
+  const genres = inferGenres(sections, bpm);
+
+  return { name, duration, bpm, sections, windows, genres, file };
+}
+
+function guessBPM(channelData, sampleRate, duration) {
+  const step = Math.floor(sampleRate * 0.01);
+  const energies = [];
+  for (let i = 0; i < channelData.length - step; i += step) {
+    let e = 0;
+    for (let j = i; j < i + step; j++) e += Math.abs(channelData[j]);
+    energies.push(e / step);
+  }
+
+  const mean = energies.reduce((a,b) => a+b,0) / energies.length;
+  const peaks = [];
+  for (let i = 1; i < energies.length - 1; i++) {
+    if (energies[i] > mean * 1.5 && energies[i] > energies[i-1] && energies[i] > energies[i+1]) {
+      if (peaks.length === 0 || i - peaks[peaks.length-1] > 20) peaks.push(i);
+    }
+  }
+
+  if (peaks.length < 2) return null;
+  const diffs = [];
+  for (let i = 1; i < Math.min(peaks.length, 20); i++) diffs.push(peaks[i] - peaks[i-1]);
+  const avgDiff = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+  const bpm = Math.round(60 / (avgDiff * 0.01));
+  if (bpm < 40 || bpm > 220) return null;
+  return bpm;
+}
+
+function inferGenres(sections, bpm) {
+  const tags = new Set();
+  const peakPct = sections.filter(s=>s.level==='peak').reduce((a,s)=>a+(s.end-s.start),0);
+  const total = sections.reduce((a,s)=>a+(s.end-s.start),0);
+  const peakRatio = peakPct/total;
+  const introPct = sections.filter(s=>s.level==='intro').reduce((a,s)=>a+(s.end-s.start),0)/total;
+
+  if (bpm) {
+    if (bpm < 80) { tags.add('#SlowJam'); tags.add('#LofiBeats'); }
+    else if (bpm < 100) { tags.add('#ChillHopBeats'); tags.add('#AmbientHipHop'); }
+    else if (bpm < 120) { tags.add('#HipHopInstrumental'); }
+    else if (bpm < 140) { tags.add('#TrapBeat'); tags.add('#DrillBeats'); }
+    else { tags.add('#FastPaced'); tags.add('#HighEnergy'); }
+  }
+
+  if (introPct > 0.25) { tags.add('#CinematicIntro'); tags.add('#BuildUp'); }
+  if (peakRatio > 0.5) { tags.add('#HighEnergy'); tags.add('#WorkoutMusic'); }
+  if (peakRatio < 0.2) { tags.add('#StudyBeats'); tags.add('#FocusMusic'); }
+  if (sections.length > 6) { tags.add('#DynamicTrack'); tags.add('#Progressive'); }
+  if (total > 480) { tags.add('#ExtendedPlay'); tags.add('#LongPlay'); }
+
+  tags.add('#InstrumentalStorytelling');
+  tags.add('#4knTrippy');
+  tags.add('#InstrumentalMusic');
+  tags.add('#BeatTape');
+
+  return [...tags].slice(0, 14);
+}
+
+const SECTION_LABELS = {
+  intro: ['Intro — textures open up', 'Intro — sparse, wide space', 'Outro — fades to stillness', 'Quiet passage', 'Breath — momentary silence'],
+  low:   ['First movement — rhythm emerges', 'Build — layers arrive', 'Low groove — beat settles in', 'Second build — tighter rhythm', 'Third build — longer runway'],
+  mid:   ['Mid section — groove locks in', 'Mid groove — melody surfaces', 'Transition — midpoint shift', 'Mid passage — melodic'],
+  peak:  ['Drop — full arrangement hits ✦', 'Peak — climax moment ✦', 'Main block — longest surge ✦', 'Re-entry — surges back ✦', 'Final peak — explosive close ✦'],
+};
+
+const SECTION_DESCS = {
+  intro: ['Ambient pad / cinematic', 'Wide open space', 'Fade / resolution', 'Ambient texture', 'Pre-drop breath'],
+  low:   ['Beat + world elements', 'Electronic + percussion', 'Drum groove enters', 'Trap + electronic', 'Synth layers build'],
+  mid:   ['Melody + rhythm locked', 'Full mid arrangement', 'Bridging passage', 'Dynamic mid section'],
+  peak:  ['Full arrangement — all layers', 'Climax / maximum energy', 'Heaviest moment', 'Everything returns', 'Maximum density'],
+};
+
+function pickLabel(level, idx) {
+  const arr = SECTION_LABELS[level] || SECTION_LABELS.intro;
+  return arr[idx % arr.length];
+}
+function pickDesc(level, idx) {
+  const arr = SECTION_DESCS[level] || SECTION_DESCS.intro;
+  return arr[idx % arr.length];
+}
+
+function renderResult(data) {
+  const { name, duration, bpm, sections, genres } = data;
+  const levelCount = { intro: 0, low: 0, mid: 0, peak: 0 };
+
+  const tsRows = sections.map(s => {
+    const idx = levelCount[s.level] || 0;
+    levelCount[s.level] = idx + 1;
+    const label = pickLabel(s.level, idx);
+    const desc = pickDesc(s.level, idx);
+    const barPct = Math.round(s.norm * 100);
+    return { time: fmt(s.start), label, desc, level: s.level, barPct };
+  });
+
+  const ytText = tsRows.map(r => `${r.time}  ${r.label.replace(' ✦','')}`).join('\n');
+
+  const div = document.createElement('div');
+  div.className = 'track-result';
+  div.innerHTML = `
+    <div class="track-result-header">
+      <div class="tr-title">${name}</div>
+      <div class="tr-meta">
+        <span>${fmt(duration)}</span>
+        ${bpm ? `<span>${bpm} BPM</span>` : ''}
+        <span>Instrumental</span>
+      </div>
+    </div>
+    <div class="track-body">
+      <div class="section-label">Timestamp map</div>
+      <div id="tsrows-${slugify(name)}">
+        ${tsRows.map(r => `
+          <div class="ts-row">
+            <div class="ts-time">${r.time}</div>
+            <div class="ts-label">${r.label}</div>
+            <div class="bar-wrap"><div class="bar-fill bar-${r.level}" style="width:${r.barPct}%"></div></div>
+            <div class="ts-desc">${r.desc}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="section-label" style="margin-top:20px">YouTube timestamps</div>
+      <div class="yt-box">
+        <div class="yt-box-header">
+          <div class="yt-box-title">copy + paste into description</div>
+          <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(ytText)}')">Copy</button>
+        </div>
+        <div class="yt-text">${ytText.replace(/</g,'&lt;')}</div>
+      </div>
+
+      <div class="section-label" style="margin-top:20px">Tags</div>
+      <div class="tags-wrap">
+        ${genres.map(g => `<div class="tag" onclick="copyTag(this,'${g}')">${g}</div>`).join('')}
+      </div>
+    </div>
+  `;
+  resultsEl.appendChild(div);
+}
+
+function slugify(s) { return s.replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'').toLowerCase(); }
+
+function copyText(btn, encoded) {
+  const text = decodeURIComponent(encoded);
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1800);
+  });
+}
+
+function copyTag(el, tag) {
+  navigator.clipboard.writeText(tag).then(() => {
+    const orig = el.textContent;
+    el.textContent = 'Copied';
+    setTimeout(() => el.textContent = orig, 1000);
+  });
+}
+</script>
+</body>
+</html>

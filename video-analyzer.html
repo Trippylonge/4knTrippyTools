@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Analyzer — 4knTrippy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Bebas+Neue&family=Syne:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080808;
+    --surface: #101010;
+    --surface2: #161616;
+    --surface3: #1e1e1e;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.14);
+    --text: #ede9e3;
+    --muted: #555;
+    --muted2: #777;
+    --accent: #c8f135;
+    --accent-dark: #8ab010;
+    --red: #e24b4a;
+    --amber: #ef9f27;
+    --teal: #5dcaa5;
+    --gray: #555;
+    --peak: #e24b4a;
+    --mid: #ef9f27;
+    --low: #5dcaa5;
+    --intro: #333;
+    --mono: 'DM Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+  .logo em { color: var(--accent); font-style: normal; }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 3px 8px;
+    letter-spacing: 0.1em;
+  }
+
+  .main { padding: 40px; max-width: 960px; margin: 0 auto; }
+
+  .drop-zone {
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+    margin-bottom: 28px;
+    transition: border-color 0.2s;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); }
+  .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+  .drop-inner {
+    padding: 48px 40px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+  .drop-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 28px;
+    color: var(--muted2);
+  }
+  .drop-text {}
+  .drop-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .drop-sub { font-size: 12px; font-family: var(--mono); color: var(--muted); }
+  .drop-formats { margin-top: 10px; display: flex; gap: 6px; }
+  .fmt-pill {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 3px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    color: var(--muted2);
+    letter-spacing: 0.05em;
+  }
+
+  .accent-bar {
+    height: 3px;
+    background: var(--accent);
+    width: 0;
+    transition: width 0.4s;
+  }
+  .drop-zone:hover .accent-bar, .drop-zone.drag-over .accent-bar { width: 100%; }
+
+  .queue { margin-bottom: 24px; display: flex; flex-direction: column; gap: 6px; }
+
+  .queue-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0;
+    overflow: hidden;
+  }
+  .qi-inner {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .qi-thumb {
+    width: 48px;
+    height: 32px;
+    background: var(--surface3);
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 18px;
+  }
+  .qi-thumb canvas, .qi-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .qi-name { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qi-status { font-size: 11px; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  .qi-status.analyzing { color: var(--amber); }
+  .qi-status.done { color: var(--accent); }
+  .qi-status.error { color: var(--red); }
+  .qi-prog { height: 2px; background: var(--surface3); }
+  .qi-prog-fill { height: 100%; background: var(--accent); width: 0; transition: width 0.3s; }
+
+  .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 40px; flex-wrap: wrap; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    padding: 13px 28px;
+    font-family: var(--display);
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    display: none;
+  }
+  .btn-primary.visible { display: inline-block; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .platform-selector {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+  .platform-selector.visible { display: flex; }
+  .platform-btn {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .platform-btn.active { border-color: var(--accent); color: var(--accent); }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: none;
+  }
+  .legend.visible { display: flex; }
+  .leg { display: flex; align-items: center; gap: 7px; font-size: 11px; font-family: var(--mono); color: var(--muted2); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 1px; flex-shrink: 0; }
+
+  .results { display: flex; flex-direction: column; gap: 40px; }
+
+  .track-result {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .result-header {
+    padding: 20px 24px 18px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .thumb-large {
+    width: 80px;
+    height: 52px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .thumb-large canvas, .thumb-large img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .result-title { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .result-meta { display: flex; gap: 14px; flex-wrap: wrap; }
+  .meta-chip {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted2);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .meta-chip .dot { width: 4px; height: 4px; background: var(--border2); border-radius: 50%; }
+
+  .result-body { padding: 24px; }
+
+  .section-head {
+    font-size: 10px;
+    font-family: var(--mono);
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    margin-top: 24px;
+  }
+  .section-head:first-child { margin-top: 0; }
+
+  .ts-table { width: 100%; border-collapse: collapse; }
+  .ts-table tr { border-bottom: 1px solid var(--border); }
+  .ts-table tr:last-child { border-bottom: none; }
+  .ts-table td { padding: 8px 0; vertical-align: middle; }
+  .ts-table td:not(:last-child) { padding-right: 12px; }
+
+  .td-time { font-family: var(--mono); font-size: 13px; color: var(--accent); white-space: nowrap; width: 48px; }
+  .td-label { font-size: 13px; color: var(--text); }
+  .td-bar { width: 120px; }
+  .bar-wrap { height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .bar-intro { background: var(--intro); }
+  .bar-low   { background: var(--low); }
+  .bar-mid   { background: var(--mid); }
+  .bar-peak  { background: var(--peak); }
+  .td-scene { font-size: 11px; font-family: var(--mono); color: var(--muted); text-align: right; width: 160px; }
+
+  .platform-outputs { display: flex; flex-direction: column; gap: 10px; }
+
+  .platform-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .pb-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .pb-name { font-size: 11px; font-family: var(--mono); color: var(--muted2); letter-spacing: 0.06em; }
+  .pb-actions { display: flex; gap: 6px; }
+  .copy-btn {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--accent);
+    background: none;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 3px 10px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: opacity 0.15s;
+  }
+  .copy-btn:hover { opacity: 0.7; }
+  .pb-body { padding: 12px 14px; font-family: var(--mono); font-size: 12px; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+
+  .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 4px 10px;
+    border-radius: 2px;
+    border: 1px solid var(--border2);
+    color: var(--muted2);
+    cursor: pointer;
+    transition: border-color 0.12s, color 0.12s, background 0.12s;
+    letter-spacing: 0.02em;
+  }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+  .tag.copied { background: rgba(200,241,53,0.08); border-color: var(--accent); color: var(--accent); }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: var(--mono);
+    line-height: 2;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .pulsing { animation: pulse 1s ease-in-out infinite; }
+
+  .waveform-row {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 40px;
+    margin-bottom: 16px;
+    padding: 0 2px;
+  }
+  .wf-bar {
+    flex: 1;
+    border-radius: 1px;
+    min-height: 2px;
+    transition: opacity 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">VIDEO<em>.</em>ANALYZER</div>
+  <div class="badge">WEB AUDIO ENGINE</div>
+</header>
+
+<div class="main">
+
+  <div class="drop-zone" id="dropZone">
+    <div class="accent-bar" id="accentBar"></div>
+    <input type="file" id="fileInput" accept="video/*,.mp4,.mov,.avi,.mkv,.webm" multiple>
+    <div class="drop-inner">
+      <div class="drop-icon-wrap">▶</div>
+      <div class="drop-text">
+        <div class="drop-title">Drop video files here</div>
+        <div class="drop-sub">Audio extracted in-browser — no upload to server</div>
+        <div class="drop-formats">
+          <span class="fmt-pill">MP4</span>
+          <span class="fmt-pill">MOV</span>
+          <span class="fmt-pill">WEBM</span>
+          <span class="fmt-pill">MKV</span>
+          <span class="fmt-pill">AVI</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="queue" id="queue"></div>
+
+  <div class="controls">
+    <button class="btn-primary" id="analyzeBtn" onclick="analyzeAll()">ANALYZE</button>
+    <div class="platform-selector" id="platformSelector">
+      <span>platform —</span>
+      <button class="platform-btn active" data-p="yt" onclick="setPlatform('yt',this)">YouTube</button>
+      <button class="platform-btn" data-p="ig" onclick="setPlatform('ig',this)">Instagram</button>
+      <button class="platform-btn" data-p="tiktok" onclick="setPlatform('tiktok',this)">TikTok</button>
+      <button class="platform-btn" data-p="threads" onclick="setPlatform('threads',this)">Threads</button>
+    </div>
+  </div>
+
+  <div class="legend" id="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--intro)"></div>Intro / outro</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--low)"></div>Build</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--mid)"></div>Mid</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--peak)"></div>Peak</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty-state">
+      Upload video files and hit Analyze.<br>
+      Timestamp maps, scene labels, platform captions and tags generated automatically.
+    </div>
+  </div>
+
+</div>
+
+<canvas id="scratchCanvas" style="display:none" width="160" height="90"></canvas>
+
+<script>
+const files = [];
+const thumbnails = {};
+let activePlatform = 'yt';
+let audioCtx;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const queueEl = document.getElementById('queue');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const resultsEl = document.getElementById('results');
+const legendEl = document.getElementById('legend');
+const platformSel = document.getElementById('platformSelector');
+const scratchCanvas = document.getElementById('scratchCanvas');
+const scratchCtx = scratchCanvas.getContext('2d');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); addFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+
+function addFiles(newFiles) {
+  for (const f of newFiles) {
+    if (!files.find(x => x.name === f.name && x.size === f.size)) {
+      files.push(f);
+      extractThumbnail(f, files.length - 1);
+    }
+  }
+  if (files.length) {
+    analyzeBtn.classList.add('visible');
+    platformSel.classList.add('visible');
+    document.querySelector('.empty-state')?.remove();
+  }
+  renderQueue();
+}
+
+function extractThumbnail(file, idx) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.src = url;
+  video.muted = true;
+  video.crossOrigin = 'anonymous';
+  video.addEventListener('loadeddata', () => {
+    video.currentTime = Math.min(3, video.duration * 0.1);
+  });
+  video.addEventListener('seeked', () => {
+    scratchCanvas.width = 160; scratchCanvas.height = 90;
+    scratchCtx.drawImage(video, 0, 0, 160, 90);
+    thumbnails[idx] = scratchCanvas.toDataURL('image/jpeg', 0.7);
+    URL.revokeObjectURL(url);
+    renderQueue();
+  }, { once: true });
+  video.load();
+}
+
+function renderQueue() {
+  queueEl.innerHTML = '';
+  files.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'queue-item';
+    item.id = 'qi-' + i;
+    const thumb = thumbnails[i]
+      ? `<img src="${thumbnails[i]}" alt="">`
+      : `▶`;
+    item.innerHTML = `
+      <div class="qi-inner">
+        <div class="qi-thumb">${thumb}</div>
+        <div class="qi-name">${f.name}</div>
+        <div class="qi-status" id="qs-${i}">ready</div>
+      </div>
+      <div class="qi-prog"><div class="qi-prog-fill" id="qp-${i}"></div></div>
+    `;
+    queueEl.appendChild(item);
+  });
+}
+
+function setStatus(i, text, cls) {
+  const el = document.getElementById('qs-' + i);
+  if (el) { el.textContent = text; el.className = 'qi-status ' + (cls||''); }
+}
+function setProgress(i, pct) {
+  const el = document.getElementById('qp-' + i);
+  if (el) el.style.width = pct + '%';
+}
+
+function fmt(s) {
+  s = Math.round(s);
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+function setPlatform(p, btn) {
+  activePlatform = p;
+  document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.platform-outputs').forEach(po => {
+    const blocks = po.querySelectorAll('.platform-block');
+    blocks.forEach(b => {
+      b.style.display = b.dataset.platform === p ? 'block' : 'none';
+    });
+  });
+}
+
+async function analyzeAll() {
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = 'ANALYZING…';
+  legendEl.classList.add('visible');
+  resultsEl.innerHTML = '';
+
+  for (let i = 0; i < files.length; i++) {
+    setStatus(i, 'extracting audio…', 'analyzing pulsing');
+    setProgress(i, 10);
+    try {
+      const result = await analyzeFile(files[i], i);
+      setProgress(i, 100);
+      setStatus(i, 'done', 'done');
+      renderResult(result, i);
+    } catch(e) {
+      setStatus(i, 'error: ' + e.message, 'error');
+      console.error(e);
+    }
+  }
+
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = 'RE-ANALYZE';
+}
+
+async function analyzeFile(file, idx) {
+  const ctx = getAudioCtx();
+  setProgress(idx, 20);
+
+  const arrayBuffer = await file.arrayBuffer();
+  setProgress(idx, 50);
+
+  const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+  setProgress(idx, 70);
+
+  const duration = audioBuffer.duration;
+  const sampleRate = audioBuffer.sampleRate;
+  const channelData = audioBuffer.getChannelData(0);
+
+  const WINDOW = duration > 300 ? 20 : duration > 60 ? 10 : 5;
+  const windows = [];
+
+  for (let t = 0; t < duration - WINDOW / 2; t += WINDOW) {
+    const s0 = Math.floor(t * sampleRate);
+    const s1 = Math.min(Math.floor((t + WINDOW) * sampleRate), channelData.length);
+    let sum = 0;
+    for (let s = s0; s < s1; s++) sum += channelData[s] * channelData[s];
+    windows.push({ t, rms: Math.sqrt(sum / (s1 - s0)) });
+  }
+
+  setProgress(idx, 85);
+
+  const vals = windows.map(w => w.rms);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const range = mx - mn || 1;
+
+  windows.forEach(w => {
+    w.norm = (w.rms - mn) / range;
+    w.level = w.norm < 0.18 ? 'intro' : w.norm < 0.44 ? 'low' : w.norm < 0.72 ? 'mid' : 'peak';
+  });
+
+  const sections = buildSections(windows, duration);
+  const bpm = detectBPM(channelData, sampleRate);
+  const name = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+
+  const videoMeta = await getVideoMeta(file);
+  const tags = inferVideoTags(sections, bpm, duration, videoMeta);
+  const captions = buildCaptions(name, sections, bpm, duration, tags);
+
+  setProgress(idx, 100);
+
+  return { name, duration, bpm, sections, windows, tags, captions, thumbnail: thumbnails[idx], videoMeta };
+}
+
+function buildSections(windows, duration) {
+  const sections = [];
+  let curLevel = windows[0]?.level;
+  let curStart = 0;
+
+  for (let i = 1; i < windows.length; i++) {
+    if (windows[i].level !== curLevel) {
+      sections.push({
+        start: curStart,
+        end: windows[i].t,
+        level: curLevel,
+        norm: windows.slice(Math.max(0,i-3),i).reduce((a,w)=>a+w.norm,0)/Math.min(3,i)
+      });
+      curStart = windows[i].t;
+      curLevel = windows[i].level;
+    }
+  }
+  if (windows.length) {
+    sections.push({
+      start: curStart,
+      end: duration,
+      level: curLevel,
+      norm: windows[windows.length-1].norm
+    });
+  }
+  return sections;
+}
+
+function detectBPM(channelData, sampleRate) {
+  const step = Math.floor(sampleRate * 0.01);
+  const energies = [];
+  for (let i = 0; i < Math.min(channelData.length, sampleRate * 60); i += step) {
+    let e = 0;
+    const end = Math.min(i + step, channelData.length);
+    for (let j = i; j < end; j++) e += Math.abs(channelData[j]);
+    energies.push(e / (end - i));
+  }
+  const mean = energies.reduce((a,b)=>a+b,0)/energies.length;
+  const peaks = [];
+  for (let i = 1; i < energies.length - 1; i++) {
+    if (energies[i] > mean * 1.4 && energies[i] > energies[i-1] && energies[i] > energies[i+1]) {
+      if (!peaks.length || i - peaks[peaks.length-1] > 15) peaks.push(i);
+    }
+  }
+  if (peaks.length < 4) return null;
+  const diffs = [];
+  for (let i = 1; i < Math.min(peaks.length, 24); i++) diffs.push(peaks[i]-peaks[i-1]);
+  const avg = diffs.reduce((a,b)=>a+b,0)/diffs.length;
+  const bpm = Math.round(60 / (avg * 0.01));
+  return (bpm >= 40 && bpm <= 220) ? bpm : null;
+}
+
+function getVideoMeta(file) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.src = url;
+    v.addEventListener('loadedmetadata', () => {
+      resolve({ width: v.videoWidth, height: v.videoHeight, duration: v.duration });
+      URL.revokeObjectURL(url);
+    }, { once: true });
+    v.addEventListener('error', () => resolve({}), { once: true });
+    v.load();
+  });
+}
+
+function inferVideoTags(sections, bpm, duration, videoMeta) {
+  const tags = new Set();
+  const total = sections.reduce((a,s)=>a+(s.end-s.start),0);
+  const peakRatio = sections.filter(s=>s.level==='peak').reduce((a,s)=>a+(s.end-s.start),0)/total;
+  const introRatio = sections.filter(s=>s.level==='intro').reduce((a,s)=>a+(s.end-s.start),0)/total;
+
+  if (duration <= 90) { tags.add('#Shorts'); tags.add('#ShortForm'); }
+  else if (duration <= 300) { tags.add('#MusicVideo'); }
+  else { tags.add('#ExtendedCut'); tags.add('#FullLength'); }
+
+  if (videoMeta.width && videoMeta.height) {
+    const ratio = videoMeta.width / videoMeta.height;
+    if (ratio < 0.7) { tags.add('#Vertical'); tags.add('#MobileFirst'); }
+    else if (ratio > 1.6) { tags.add('#Widescreen'); tags.add('#Cinematic'); }
+    else { tags.add('#Square'); }
+  }
+
+  if (bpm) {
+    if (bpm < 85) { tags.add('#SlowBurn'); tags.add('#ChillVibes'); }
+    else if (bpm < 105) { tags.add('#MidTempo'); tags.add('#GrooveBeats'); }
+    else if (bpm < 125) { tags.add('#HipHop'); tags.add('#TrapBeats'); }
+    else { tags.add('#HighBPM'); tags.add('#EnergyBeats'); }
+  }
+
+  if (peakRatio > 0.55) { tags.add('#HighEnergy'); tags.add('#Hype'); }
+  if (introRatio > 0.3) { tags.add('#CinematicIntro'); tags.add('#Atmospheric'); }
+  if (sections.length > 7) { tags.add('#Dynamic'); tags.add('#Progressive'); }
+
+  tags.add('#4knTrippy');
+  tags.add('#InstrumentalStorytelling');
+  tags.add('#MusicVideo');
+  tags.add('#IndependentArtist');
+  tags.add('#VisualArt');
+
+  return [...tags].slice(0, 16);
+}
+
+const SECTION_LABELS = {
+  intro: ['Intro', 'Outro', 'Fade in', 'Quiet open', 'Breath'],
+  low:   ['Build', 'First movement', 'Low groove', 'Second build', 'Slow rise'],
+  mid:   ['Mid section', 'Groove lock', 'Transition', 'Mid peak'],
+  peak:  ['Drop ✦', 'Climax ✦', 'Main block ✦', 'Peak surge ✦', 'Final push ✦'],
+};
+const SCENE_DESCS = {
+  intro: ['Ambient / atmospheric', 'Fade / resolution', 'Establishing shot', 'Wide open', 'Pre-drop breath'],
+  low:   ['Beat enters', 'Layers arriving', 'Visual build', 'Rhythm locks in', 'Slow movement'],
+  mid:   ['Full groove', 'Melodic passage', 'Visual bridge', 'Dynamic mid'],
+  peak:  ['Full energy', 'Heaviest moment', 'Max density', 'Everything in', 'Climax beat'],
+};
+
+function pickArr(obj, level, idx) {
+  const arr = obj[level] || obj.intro;
+  return arr[idx % arr.length];
+}
+
+function buildCaptions(name, sections, bpm, duration, tags) {
+  const topTags = tags.slice(0,8).join(' ');
+  const bpmStr = bpm ? ` · ${bpm} BPM` : '';
+  const durStr = fmt(duration);
+  const peakMoment = sections.find(s=>s.level==='peak');
+  const peakTime = peakMoment ? fmt(peakMoment.start) : null;
+
+  const ytTs = (() => {
+    const levelCount = {};
+    return sections.map(s => {
+      const idx = levelCount[s.level] = (levelCount[s.level]||0);
+      levelCount[s.level]++;
+      return `${fmt(s.start)}  ${pickArr(SECTION_LABELS, s.level, idx).replace(' ✦','')}`;
+    }).join('\n');
+  })();
+
+  const yt = `${name} (Official Video) | 4knTrippy\n\n${peakTime ? `Hit ${peakTime} for the drop.\n\n` : ''}Instrumental storytelling${bpmStr} · ${durStr}\n\n⸻ Timestamps ⸻\n${ytTs}\n\n${topTags}`;
+
+  const ig = `${name} is out now.\n${peakTime ? `The drop hits at ${peakTime}. Worth the wait.\n` : ''}Link in bio.\n\n${topTags}`;
+
+  const tiktok = `POV: you just found the drop at ${peakTime||'the halfway point'} 🎵\n\n${name} — 4knTrippy\n\n${tags.slice(0,6).join(' ')}`;
+
+  const threads = `New visual for "${name}" is live.\n${peakTime ? `The energy at ${peakTime} is everything.\n` : ''}Instrumental storytelling${bpmStr}. Watch it straight through.\n\n${topTags}`;
+
+  return { yt, ig, tiktok, threads };
+}
+
+function renderResult(data, fileIdx) {
+  const { name, duration, bpm, sections, windows, tags, captions, thumbnail, videoMeta } = data;
+  const levelCount = {};
+
+  const tsRows = sections.map(s => {
+    const idx = levelCount[s.level] = (levelCount[s.level]||0);
+    levelCount[s.level]++;
+    return {
+      time: fmt(s.start),
+      label: pickArr(SECTION_LABELS, s.level, idx),
+      desc: pickArr(SCENE_DESCS, s.level, idx),
+      level: s.level,
+      barPct: Math.round(s.norm * 100),
+    };
+  });
+
+  const wfBars = windows.map(w => {
+    const pct = Math.round(w.norm * 100);
+    const col = w.level === 'peak' ? 'var(--peak)' : w.level === 'mid' ? 'var(--mid)' : w.level === 'low' ? 'var(--low)' : 'var(--intro)';
+    return `<div class="wf-bar" style="height:${Math.max(6,pct*0.4)}px;background:${col};opacity:0.85"></div>`;
+  }).join('');
+
+  const thumbHtml = thumbnail
+    ? `<img src="${thumbnail}" alt="Video thumbnail">`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:20px">▶</div>`;
+
+  const resEl = document.createElement('div');
+  resEl.className = 'track-result';
+
+  const platforms = [
+    { id: 'yt', label: 'YOUTUBE', content: captions.yt },
+    { id: 'ig', label: 'INSTAGRAM', content: captions.ig },
+    { id: 'tiktok', label: 'TIKTOK', content: captions.tiktok },
+    { id: 'threads', label: 'THREADS', content: captions.threads },
+  ];
+
+  const platformsHtml = platforms.map(p => `
+    <div class="platform-block" data-platform="${p.id}" style="${p.id !== activePlatform ? 'display:none' : ''}">
+      <div class="pb-header">
+        <span class="pb-name">${p.label}</span>
+        <div class="pb-actions">
+          <button class="copy-btn" onclick="copyBlock(this, \`${encodeURIComponent(p.content)}\`)">Copy</button>
+        </div>
+      </div>
+      <div class="pb-body">${escHtml(p.content)}</div>
+    </div>
+  `).join('');
+
+  resEl.innerHTML = `
+    <div class="result-header">
+      <div class="thumb-large">${thumbHtml}</div>
+      <div>
+        <div class="result-title">${escHtml(name)}</div>
+        <div class="result-meta">
+          <div class="meta-chip">${fmt(duration)}</div>
+          ${bpm ? `<div class="meta-chip"><span class="dot"></span>${bpm} BPM</div>` : ''}
+          ${videoMeta.width ? `<div class="meta-chip"><span class="dot"></span>${videoMeta.width}×${videoMeta.height}</div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="result-body">
+
+      <div class="section-head">Waveform overview</div>
+      <div class="waveform-row">${wfBars}</div>
+
+      <div class="section-head">Timestamp map</div>
+      <table class="ts-table">
+        ${tsRows.map(r => `
+          <tr>
+            <td class="td-time">${r.time}</td>
+            <td class="td-label">${r.label}</td>
+            <td class="td-bar"><div class="bar-wrap"><div class="bar-fill bar-${r.level}" style="width:${r.barPct}%"></div></div></td>
+            <td class="td-scene">${r.desc}</td>
+          </tr>
+        `).join('')}
+      </table>
+
+      <div class="section-head" style="margin-top:28px">Platform captions</div>
+      <div class="platform-outputs">${platformsHtml}</div>
+
+      <div class="section-head">Tags</div>
+      <div class="tags-wrap">
+        ${tags.map(t => `<div class="tag" onclick="tapTag(this,'${escHtml(t)}')">${escHtml(t)}</div>`).join('')}
+      </div>
+
+    </div>
+  `;
+
+  resultsEl.appendChild(resEl);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/`/g,'&#96;');
+}
+
+function copyBlock(btn, encoded) {
+  navigator.clipboard.writeText(decodeURIComponent(encoded)).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+function tapTag(el, tag) {
+  navigator.clipboard.writeText(tag).then(() => {
+    el.classList.add('copied');
+    const orig = el.textContent;
+    el.textContent = 'copied';
+    setTimeout(() => { el.textContent = orig; el.classList.remove('copied'); }, 1200);
+  });
+}
+</script>
+</body>
+</html>
